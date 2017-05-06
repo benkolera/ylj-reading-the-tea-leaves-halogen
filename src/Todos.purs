@@ -7,11 +7,12 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Data.Maybe (Maybe(..))
 
-data Query a = Noop a
+data Query a = Toggle Int a
 
 type Todo = 
   { completed :: Boolean
   , title     :: String 
+  , todoId    :: Int
   }
 
 type State = 
@@ -29,8 +30,8 @@ todos =
 
   initialState :: State
   initialState = { todos : 
-    [ { completed : false, title : "Write Talk" }
-    , { completed : true, title : "Propose Talk"}
+    [ { completed : false, title : "Write Talk", todoId : 2 }
+    , { completed : true, title : "Propose Talk", todoId : 1 }
     ]}
 
   renderTodo :: Todo -> H.ComponentHTML Query
@@ -40,6 +41,7 @@ todos =
       [ HH.input 
         [ HP.type_ HP.InputCheckbox
         , HP.class_ (H.ClassName "toggle")
+        , HE.onClick (HE.input_ $ Toggle t.todoId)
         ]
       , HH.text t.title 
       ]]
@@ -53,6 +55,14 @@ todos =
 
   eval :: Query ~> H.ComponentDSL State Query Void m
   eval = case _ of
-    Noop next -> do
+    Toggle tId next -> do
+      H.modify 
+        (\s -> s 
+          { todos = map (\t -> 
+            if t.todoId == tId 
+            then t { completed = not t.completed } 
+            else t 
+          ) s.todos }
+        )
       pure next
 
