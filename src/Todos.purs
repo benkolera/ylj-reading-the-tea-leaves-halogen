@@ -6,8 +6,9 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import Data.Maybe (Maybe(..))
+import Debug.Trace (spy)
 
-data Query a = Toggle Int a
+data Query a = Toggle Int a | UpdateInput String a
 
 type Todo = 
   { completed :: Boolean
@@ -16,7 +17,9 @@ type Todo =
   }
 
 type State = 
-  { todos :: Array Todo }
+  { todos :: Array Todo
+  , editingStr :: String
+  }
 
 todos :: forall m. H.Component HH.HTML Query Unit Void m
 todos =
@@ -29,10 +32,12 @@ todos =
   where
 
   initialState :: State
-  initialState = { todos : 
-    [ { completed : false, title : "Write Talk", todoId : 2 }
-    , { completed : true, title : "Propose Talk", todoId : 1 }
-    ]}
+  initialState = 
+    { editingStr : ""
+    , todos : 
+      [ { completed : false, title : "Write Talk", todoId : 2 }
+      , { completed : true, title : "Propose Talk", todoId : 1 }
+      ]}
 
   renderTodo :: Todo -> H.ComponentHTML Query
   renderTodo t = HH.li 
@@ -49,7 +54,14 @@ todos =
   render :: State -> H.ComponentHTML Query
   render state = HH.section_ 
     [ HH.section [HP.class_ (H.ClassName "todo")]
-      [ HH.ul [HP.class_ (H.ClassName "todo-list")]
+      [ HH.input 
+        [ HP.placeholder "What needs to be done?"
+        , HP.class_ (H.ClassName "new-todo")
+        , HP.type_ HP.InputText 
+        , HP.value state.editingStr
+        , HE.onValueInput (HE.input UpdateInput)
+        ]
+      , HH.ul [HP.class_ (H.ClassName "todo-list")]
         $ map renderTodo state.todos 
         ]]
 
@@ -64,5 +76,8 @@ todos =
             else t 
           ) s.todos }
         )
+      pure next
+    UpdateInput s next -> do
+      H.modify (_ { editingStr = spy s })
       pure next
 
