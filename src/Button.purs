@@ -8,7 +8,7 @@ import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 
 -- State is our model for the UI
-type State = { on :: Boolean }
+type State = { on :: Boolean, clicks :: Int }
 
 -- Query reprents the actions that can happen in this component.
 -- The a is there so we can make queries that return values to 
@@ -36,13 +36,18 @@ button =
   where
 
   initialState :: State
-  initialState = { on : false }
+  initialState = { on : false, clicks : 0 }
 
   -- We render our HTML view from our State type
   render :: State -> H.ComponentHTML Query
   render state =
     let
-      label = if state.on then "World" else "Hello"
+      divBy5 = state.clicks `mod` 5 == 0
+      divBy3 = state.clicks `mod` 3 == 0
+      label = if divBy5 && divBy3 then "FizzBuzz" 
+              else if divBy3 then "Fizz"
+              else if divBy5 then "Buzz"
+              else show state.clicks
     in
       HH.button
         [ HP.title label
@@ -60,7 +65,7 @@ button =
     Toggle next -> do
       -- H.modify takes a function from State -> State and updates our 
       -- component state with the new value
-      H.modify (\ s -> s { on = not s.on } )
+      H.modify (\ s -> s { on = not s.on, clicks = s.clicks + 1 } )
       -- We have to return the continuation
       pure next
     Reset next -> do
