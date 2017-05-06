@@ -6,29 +6,28 @@ import Halogen.HTML as HH
 import Halogen.HTML.Events as HE
 import Halogen.HTML.Properties as HP
 import DOM.Event.KeyboardEvent (code)
+import Data.Newtype (unwrap)
 import Data.Maybe (Maybe(..))
-import Debug.Trace (spy)
+
+import Todo as Todo
 
 data Query a 
-  = Toggle Int a 
-  | UpdateInput String a
+  = UpdateInput String a
   | NewTodo a
 
-type Todo = 
-  { completed :: Boolean
-  , title     :: String 
-  , todoId    :: Int
-  }
-
 type State = 
-  { todos :: Array Todo
+  { todos :: Array Todo.State
   , editingStr :: String
   , nextId :: Int
   }
 
+newtype TodoSlot = TodoSlot Todo.Id
+derive instance eqTodoSlot :: Eq TodoSlot
+derive instance ordTodoSlot :: Ord TodoSlot
+
 todos :: forall m. H.Component HH.HTML Query Unit Void m
 todos =
-  H.component
+  H.parentComponent
     { initialState: const initialState
     , render
     , eval
@@ -45,19 +44,15 @@ todos =
       , { completed : true, title : "Propose Talk", todoId : 1 }
       ]}
 
-  renderTodo :: Todo -> H.ComponentHTML Query
-  renderTodo t = HH.li 
-    [ HP.classes (if t.completed then [H.ClassName "completed"] else [])] 
-    [ HH.label []
-      [ HH.input 
-        [ HP.type_ HP.InputCheckbox
-        , HP.class_ (H.ClassName "toggle")
-        , HE.onClick (HE.input_ $ Toggle t.todoId)
-        ]
-      , HH.text t.title 
-      ]]
+  renderTodo :: Todo.State -> H.ParentHTML Query Todo.Query TodoSlot m
+  renderTodo t =
+    HH.slot
+        (TodoSlot t.todoId)
+        Todo.todo
+        t
+        (const Nothing)
 
-  render :: State -> H.ComponentHTML Query
+  render :: State -> H.ParentHTML Query Todo.Query TodoSlot m
   render state = HH.section_ 
     [ HH.section [HP.class_ (H.ClassName "todo")]
       [ HH.input 
@@ -74,18 +69,8 @@ todos =
         $ map renderTodo state.todos 
       ]]
 
-  eval :: Query ~> H.ComponentDSL State Query Void m
+  eval :: Query ~> H.ParentDSL State Query Todo.Query TodoSlot Void m
   eval = case _ of
-    Toggle tId next -> do
-      H.modify 
-        (\s -> s 
-          { todos = map (\t -> 
-            if t.todoId == tId 
-            then t { completed = not t.completed } 
-            else t 
-          ) s.todos }
-        )
-      pure next
     UpdateInput s next -> do
       H.modify (_ { editingStr = s })
       pure next

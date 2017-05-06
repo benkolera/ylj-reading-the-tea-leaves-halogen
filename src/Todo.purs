@@ -11,10 +11,12 @@ data Query a
   = Toggle a 
   | UpdateTodo State a
 
+type Id = Int
+
 type State = 
   { completed :: Boolean
   , title     :: String 
-  , todoId    :: Int
+  , todoId    :: Id
   }
 
 todo :: forall m. H.Component HH.HTML Query State Void m
